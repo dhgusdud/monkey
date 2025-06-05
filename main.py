@@ -32,12 +32,12 @@ def get_stock_data(tickers: dict, start, end):
     data = {}
     for name, ticker in tickers.items():
         try:
-            df = yf.download(ticker, start=start, end=end, progress=False)
-            if not df.empty:
+            df = yf.download(ticker, start=start, end=end, progress=False, group_by='column')
+            if not df.empty and "Adj Close" in df.columns:
                 df["Name"] = name
                 data[name] = df
             else:
-                st.warning(f"⚠️ {name} ({ticker})의 데이터가 없습니다.")
+                st.warning(f"⚠️ {name} ({ticker})의 'Adj Close' 데이터가 없습니다.")
         except Exception as e:
             st.error(f"❌ {name} ({ticker}) 데이터 로딩 중 오류 발생: {e}")
     return data
