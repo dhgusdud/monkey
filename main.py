@@ -1,36 +1,63 @@
 import streamlit as st
+import yfinance as yf
+import plotly.graph_objects as go
+import pandas as pd
+from datetime import datetime, timedelta
 
-# 페이지 기본 설정
-st.set_page_config(page_title="감정 기반 음악 추천 🎵", page_icon="🎧", layout="centered")
-
-# 타이틀
-st.markdown(
-    "<h1 style='text-align: center; color: #ff4b4b;'>🎶 감정으로 듣는 음악 추천 🎶</h1>",
-    unsafe_allow_html=True
-)
-
-st.markdown("#### 지금 기분은 어떤가요? 😄😢😡😴")
-
-# 감정 선택
-emotion = st.selectbox("🎭 감정을 선택하세요:", ["행복 😊", "슬픔 😢", "화남 😡", "피곤 😴", "사랑 💖", "신남 🕺"])
-
-# 감정별 음악 추천
-music_dict = {
-    "행복 😊": ["Pharrell Williams - Happy 🎵", "Katy Perry - Firework 🎆", "BTS - Dynamite 💥"],
-    "슬픔 😢": ["Adele - Someone Like You 💔", "이소라 - 바람이 분다 🌬️", "IU - Love Poem 🖋️"],
-    "화남 😡": ["Linkin Park - Numb ⚡", "Eminem - Lose Yourself 🔥", "G-Dragon - 삐딱하게 👊"],
-    "피곤 😴": ["Lauv - I Like Me Better 🌌", "백예린 - Bye bye my blue 🌙", "적재 - 나랑 같이 걸을래 🚶‍♀️"],
-    "사랑 💖": ["Crush - Beautiful 🌹", "Maroon 5 - Sugar 🍭", "백현 - Candy 🍬"],
-    "신남 🕺": ["Bruno Mars - 24K Magic ✨", "ZICO - 아무노래 🎉", "세븐틴 - 아주 NICE 💃"]
+# 글로벌 시가총액 Top 10 티커 (2025년 기준 추정)
+top10_tickers = {
+    "Apple": "AAPL",
+    "Microsoft": "MSFT",
+    "NVIDIA": "NVDA",
+    "Alphabet (Google)": "GOOGL",
+    "Amazon": "AMZN",
+    "Meta (Facebook)": "META",
+    "Berkshire Hathaway": "BRK-B",
+    "Tesla": "TSLA",
+    "Eli Lilly": "LLY",
+    "Taiwan Semiconductor": "TSM"
 }
 
-# 결과 출력
-if emotion:
-    st.markdown("## 🎧 추천 플레이리스트")
-    for song in music_dict[emotion]:
-        st.markdown(f"- {song}")
+# 스트림릿 설정
+st.set_page_config(page_title="Global Top 10 Stocks", layout="wide")
+st.title("📈 글로벌 시가총액 Top 10 기업의 최근 1년 주가 변화")
 
-st.markdown("---")
-st.markdown("<center>Made with ❤️ using Streamlit</center>", unsafe_allow_html=True)
+# 날짜 범위
+end_date = datetime.today()
+start_date = end_date - timedelta(days=365)
 
-st.image("https://media1.giphy.com/media/v1.Y2lkPTc5MGI3NjExY2swdDhuODBtcXE1OW53b3dqdWJ0cTBkcG9wc2E3dHA4cmdwand3MSZlcD12MV9pbnRlcm5hbF9naWZfYnlfaWQmY3Q9Zw/5VKbvrjxpVJCM/giphy.gif")
+# 데이터 가져오기
+@st.cache_data
+def get_stock_data(tickers, start, end):
+    data = {}
+    for name, ticker in tickers.items():
+        df = yf.download(ticker, start=start, end=end)
+        df["Name"] = name
+        data[name] = df
+    return data
+
+with st.spinner("데이터를 불러오는 중입니다..."):
+    stock_data = get_stock_data(top10_tickers, start_date, end_date)
+
+# Plotly 그래프 생성
+fig = go.Figure()
+
+for name, df in stock_data.items():
+    fig.add_trace(go.Scatter(
+        x=df.index,
+        y=df["Adj Close"],
+        mode="lines",
+        name=name
+    ))
+
+fig.update_layout(
+    title="최근 1년간 글로벌 시가총액 Top 10 기업 주가 변화",
+    xaxis_title="날짜",
+    yaxis_title="조정 종가 (USD)",
+    template="plotly_dark",
+    legend_title="기업명",
+    hovermode="x unified"
+)
+
+st.plotly_chart(fig, use_container_width=True)
+
